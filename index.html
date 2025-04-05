@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Currency Converter</title>
+  <style>
+    /* Base styles and accessibility improvements */
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      background-color: #f0f8ff; /* Light blue background */
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+    #app {
+      max-width: 500px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .converter {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="number"],
+    select {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    input[type="number"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #007BFF;
+      box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+    }
+    button {
+      padding: 10px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover,
+    button:focus {
+      background-color: #0056b3;
+      outline: none;
+    }
+    #result {
+      margin-top: 10px;
+      font-size: 1.2em;
+      font-weight: bold;
+      text-align: center;
+    }
+    /* Responsive design */
+    @media (max-width: 600px) {
+      #app {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Currency Converter</h1>
+    <div class="converter">
+      <!-- Amount input -->
+      <div class="input-group">
+        <label for="amount">Amount</label>
+        <input type="number" id="amount" aria-label="Enter the amount" aria-required="true" placeholder="Enter amount" min="0" step="any">
+      </div>
+      <!-- From currency dropdown -->
+      <div class="input-group">
+        <label for="fromCurrency">From Currency</label>
+        <select id="fromCurrency" aria-label="Select currency to convert from" aria-required="true">
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      <!-- To currency dropdown -->
+      <div class="input-group">
+        <label for="toCurrency">To Currency</label>
+        <select id="toCurrency" aria-label="Select currency to convert to" aria-required="true">
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      <!-- Convert button -->
+      <button id="convertBtn">Convert</button>
+      <!-- Result display -->
+      <div id="result" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    // Wait for the DOM to load
+    document.addEventListener("DOMContentLoaded", function() {
+      const amountInput = document.getElementById("amount");
+      const fromCurrency = document.getElementById("fromCurrency");
+      const toCurrency = document.getElementById("toCurrency");
+      const convertBtn = document.getElementById("convertBtn");
+      const resultDiv = document.getElementById("result");
+
+      // Populate both dropdowns with available currencies
+      function populateCurrencies(currencies) {
+        currencies.forEach(currency => {
+          const optionFrom = document.createElement("option");
+          optionFrom.value = currency;
+          optionFrom.textContent = currency;
+          fromCurrency.appendChild(optionFrom);
+
+          const optionTo = document.createElement("option");
+          optionTo.value = currency;
+          optionTo.textContent = currency;
+          toCurrency.appendChild(optionTo);
+        });
+        // Set default selections
+        fromCurrency.value = "USD";
+        toCurrency.value = "BDT";
+      }
+
+      // Fetch the list of currencies using a real-time exchange rate API
+      fetch("https://api.exchangerate-api.com/v4/latest/USD")
+        .then(response => response.json())
+        .then(data => {
+          // Extract currency codes from the returned rates
+          const currencies = Object.keys(data.rates);
+          // Ensure Bangladeshi Taka (BDT) is included
+          if (!currencies.includes("BDT")) {
+            currencies.push("BDT");
+          }
+          // Sort the list alphabetically
+          currencies.sort();
+          populateCurrencies(currencies);
+        })
+        .catch(error => {
+          console.error("Error fetching currencies:", error);
+          resultDiv.textContent = "Error loading currencies. Please try again later.";
+        });
+
+      // Handle the conversion process
+      convertBtn.addEventListener("click", function() {
+        const amount = parseFloat(amountInput.value);
+        const from = fromCurrency.value;
+        const to = toCurrency.value;
+
+        if (isNaN(amount) || amount < 0) {
+          resultDiv.textContent = "Please enter a valid amount.";
+          return;
+        }
+
+        // Fetch conversion rates based on the "From" currency
+        fetch("https://api.exchangerate-api.com/v4/latest/" + from)
+          .then(response => response.json())
+          .then(data => {
+            const rate = data.rates[to];
+            if (rate) {
+              const converted = (amount * rate).toFixed(2);
+              resultDiv.textContent = `${amount} ${from} = ${converted} ${to}`;
+            } else {
+              resultDiv.textContent = "Conversion rate not available.";
+            }
+          })
+          .catch(error => {
+            console.error("Error fetching conversion rate:", error);
+            resultDiv.textContent = "Error converting currency. Please try again later.";
+          });
+      });
+    });
+  </script>
+</body>
+</html>
